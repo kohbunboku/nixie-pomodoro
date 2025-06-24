@@ -1,133 +1,114 @@
-let workMinutes = 25;
-let breakMinutes = 5;
-let isRunning = false;
-let isWorkTime = true;
+let workDuration = 25 * 60;
+let breakDuration = 5 * 60;
+let isWork = true;
+let timeLeft = workDuration;
 let timerInterval;
 let cycleCount = 0;
 
-function updateDisplay(totalSeconds) {
-  let minutes = Math.floor(totalSeconds / 60);
-  let seconds = totalSeconds % 60;
-  const digits = {
-    minTens: Math.floor(minutes / 10),
-    minOnes: minutes % 10,
-    secTens: Math.floor(seconds / 10),
-    secOnes: seconds % 10
-  };
-  for (let id in digits) {
-    document.querySelector(`#${id} .digit-front`).textContent = digits[id];
-  }
-}
-
-function updateStatus() {
-  const statusText = isWorkTime ? "集中タイム ✍️" : "ブレイクタイム ☕️";
-  document.getElementById("status").textContent = statusText;
-}
-
-function updateCycleCount() {
-  document.getElementById("cycle-count").textContent = `サイクル数：${cycleCount}回`;
-}
-
-function logCycleTime() {
+function getTodayKey() {
   const now = new Date();
-  const logEntry = document.createElement("li");
-  logEntry.textContent = `${now.toLocaleDateString()} ${now.toLocaleTimeString()} にサイクル完了`;
-  document.getElementById("cycle-log").appendChild(logEntry);
-
-  let logs = JSON.parse(localStorage.getItem("cycleLogs") || "[]");
-  logs.push(logEntry.textContent);
-  localStorage.setItem("cycleLogs", JSON.stringify(logs));
+  return now.toISOString().slice(0, 10); // 例: "2025-06-24"
 }
 
-function loadCycleLog() {
-  const logs = JSON.parse(localStorage.getItem("cycleLogs") || "[]");
-  const logList = document.getElementById("cycle-log");
+function loadLogs() {
+  const allData = JSON.parse(localStorage.getItem("pomodoroDailyLogs") || "{}");
+  const today = getTodayKey();
+  if (!allData[today]) {
+    allData[today] = { logs: [], count: 0 };
+    localStorage.setItem("pomodoroDailyLogs", JSON.stringify(allData));
+  }
+  return allData;
+}
+
+function saveLogs(allData) {
+  localStorage.setItem("pomodoroDailyLogs", JSON.stringify(allData));
+}
+
+function logCycle(status) {
+  const now = new Date();
+  const timestamp = now.toLocaleString();
+  const today = getTodayKey();
+
+  const allData = loadLogs();
+  allData[today].count += 1;
+  const cycleNum = allData[today].count;
+  const entry = `サイクル${cycleNum}：${timestamp}：${status}終了`;
+  allData[today].logs.unshift(entry);
+  saveLogs(allData);
+
+  updateLogDisplay(allData[today].logs);
+}
+
+function updateLogDisplay(logs) {
+  const logList = document.getElementById("logList");
   logList.innerHTML = "";
-  logs.forEach(entry => {
+  logs.forEach(log => {
     const li = document.createElement("li");
-    li.textContent = entry;
+    li.textContent = log;
     logList.appendChild(li);
   });
 }
 
-function dailyResetCheck() {
-  const lastDate = localStorage.getItem("lastUsedDate");
-  const today = new Date().toLocaleDateString();
-  if (lastDate !== today) {
-    localStorage.setItem("lastUsedDate", today);
-    localStorage.setItem("cycleLogs", "[]");
-    cycleCount = 0;
-    updateCycleCount();
-  }
-}
+function startPomodoro() {
+  clearInterval(timerInterval);
+  const allData = loadLogs();
+  const today = getTodayKey();
+  cycleCount = allData[today].count;
 
-function startTimer() {
-  if (isRunning) return;
-  isRunning = true;
-  let totalSeconds = (isWorkTime ? workMinutes : breakMinutes) * 60;
-
-  updateDisplay(totalSeconds);
-  updateStatus();
+  updateLogDisplay(allData[today].logs);
+  updateDigits(timeLeft);
 
   timerInterval = setInterval(() => {
-    totalSeconds--;
-    if (totalSeconds < 0) {
-      clearInterval(timerInterval);
-      if (isWorkTime) {
-        cycleCount++;
-        updateCycleCount();
-        logCycleTime();
-      }
-      isWorkTime = !isWorkTime;
-      isRunning = false;
-      updateStatus();
-      startTimer();
-    } else {
-      updateDisplay(totalSeconds);
+    timeLeft--;
+
+    if (timeLeft < 0) {
+      logCycle(isWork ? "作業" : "休憩");
+      alert(isWork ? "休憩へ移ります" : "作業に戻ります");
+
+      isWork = !isWork;
+      timeLeft = isWork ? workDuration : breakDuration;
+      document.getElementById("status").textContent = isWork ? "作業中" : "休憩中";
     }
+
+    updateDigits(timeLeft);
   }, 1000);
 }
 
-function resetTimer() {
-  clearInterval(timerInterval);
-  isRunning = false;
-  isWorkTime = true;
-  cycleCount = 0;
-  updateStatus();
-  updateCycleCount();
-  updateDisplay(workMinutes * 60);
-  localStorage.setItem("cycleLogs", "[]");
-  loadCycleLog();
+function updateDigits(time) {
+  const min = Math.floor(time / 60);
+  const sec = time % 60;
+
+  document.getElementById("minTens").textContent = Math.floor(min / 10);
+  document.getElementById("minOnes").textContent = min % 10;
+  document.getElementById("secTens").textContent = Math.floor(sec / 10);
+  document.getElementById("secOnes").textContent = sec % 10;
 }
+document.getElementById("download-csv").addEventListener("click", function () {
+  const logData = JSON.parse(localStorage.getItem("pomodoroLog") || "{}");
 
-document.getElementById("start").addEventListener("click", startTimer);
-document.getElementById("reset").addEventListener("click", resetTimer);
-
-// 初期表示
-dailyResetCheck();
-loadCycleLog();
-updateStatus();
-updateDisplay(workMinutes * 60);
-updateCycleCount();
-function downloadCycleLogAsCSV() {
-  const logs = JSON.parse(localStorage.getItem("cycleLogs") || "[]");
-  if (logs.length === 0) {
-    alert("履歴が存在しません。");
+  if (Object.keys(logData).length === 0) {
+    alert("ログがありません。");
     return;
   }
 
-  let csvContent = "data:text/csv;charset=utf-8,No,日時\n";
-  logs.forEach((entry, index) => {
-    csvContent += `${index + 1},"${entry}"\n`;
-  });
+  let csvContent = "日付,ログ\n";
 
-  const encodedUri = encodeURI(csvContent);
+  for (const [date, entry] of Object.entries(logData)) {
+    (entry.logs || []).forEach(log => {
+      csvContent += `${date},"${log}"\n`;
+    });
+  }
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
   const link = document.createElement("a");
-  link.setAttribute("href", encodedUri);
-  link.setAttribute("download", "pomodoro_cycles.csv");
+  link.href = url;
+  link.download = "pomodoro_log.csv";
+  link.style.display = "none";
+
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-}
-
-document.getElementById("download-csv").addEventListener("click", downloadCycleLogAsCSV);
+  URL.revokeObjectURL(url);
+});

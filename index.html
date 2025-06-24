@@ -2,33 +2,25 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>3Dニキシー管風ポモドーロタイマー</title>
+  <title>ニキシー管ポモドーロ</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="container">
-    <div class="tube" id="minTens"><div class="digit-back">0 1 2 3 4 5 6 7 8 9</div><div class="digit-front">2</div><div class="tube-cap top"></div><div class="tube-cap bottom"></div></div>
-    <div class="tube" id="minOnes"><div class="digit-back">0 1 2 3 4 5 6 7 8 9</div><div class="digit-front">5</div><div class="tube-cap top"></div><div class="tube-cap bottom"></div></div>
-    <div class="colon">:</div>
-    <div class="tube" id="secTens"><div class="digit-back">0 1 2 3 4 5 6 7 8 9</div><div class="digit-front">0</div><div class="tube-cap top"></div><div class="tube-cap bottom"></div></div>
-    <div class="tube" id="secOnes"><div class="digit-back">0 1 2 3 4 5 6 7 8 9</div><div class="digit-front">0</div><div class="tube-cap top"></div><div class="tube-cap bottom"></div></div>
-  </div>
-
-  <div class="buttons">
-    <button id="start">スタート</button>
-    <button id="reset">リセット</button>
+  <div id="timer">
+    <div class="tube"><img src="nixie.png" class="tube-bg"><div class="digit" id="minTens">2</div></div>
+    <div class="tube"><img src="nixie.png" class="tube-bg"><div class="digit" id="minOnes">5</div></div>
+    <div class="tube colon">:</div>
+    <div class="tube"><img src="nixie.png" class="tube-bg"><div class="digit" id="secTens">0</div></div>
+    <div class="tube"><img src="nixie.png" class="tube-bg"><div class="digit" id="secOnes">0</div></div>
   </div>
 
   <div id="status">作業中</div>
-  <div id="cycle-count">サイクル数：0回</div>
+  <button onclick="startPomodoro()">スタート</button>
+  <button id="download-csv">CSVダウンロード</button>
 
-  <div id="cycle-log-container">
-    <h3>サイクル履歴</h3>
-    <ul id="cycle-log"></ul>
-    <button id="download-csv">CSVダウンロード</button>
 
-  </div>
+  <h2>学習ログ</h2>
+  <ul id="logList"></ul>
 
   <script src="script.js"></script>
 </body>
